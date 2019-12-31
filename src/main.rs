@@ -31,11 +31,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         image
             .resize(width, height, FilterType::Gaussian)
             .pixels()
+            .filter(|(_,_, px)| px.0[3] != 0)
             .map(|(x, y, pixel)| {
                 let (r, g, b, a) = (pixel.0[0], pixel.0[1], pixel.0[2], pixel.0[3]);
 
                 format!(
-                    "PX {} {} {:x}{:x}{:x}{:x}\n",
+                    "PX {} {} {:x}{:x}{:x}{:x}",
                     offset_x as i32 + x as i32,
                     offset_y as i32 + y as i32,
                     r,
@@ -44,21 +45,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     a
                 )
             })
-            .collect::<Vec<String>>(),
+            .collect::<Vec<String>>()
+            .join("\n")
     );
 
     let mut tasks = Vec::new();
-    let draw_offset = (height * height / connections) as usize;
 
-    for i in 0..connections {
+    for _ in 0..connections {
         let host = host.clone();
         let mut conn = TcpStream::connect(host).await.unwrap();
         let instructions = instructions.clone();
 
         tasks.push(task::spawn(async move {
-            for instruction in instructions.iter().cycle().skip(i as usize * draw_offset) {
-                if let Err(e) = conn.write_all(instruction.as_bytes()).await {
-                    eprintln!("{}", e)
+            loop {
+                if let Err(e) = conn.write_all(instructions.as_bytes()).await {
+                    eprintln!("{}", e);
                 }
             }
         }))
