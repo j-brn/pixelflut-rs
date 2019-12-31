@@ -53,7 +53,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     for _ in 0..connections {
         let host = host.clone();
-        let mut conn = TcpStream::connect(host).await.unwrap();
+        let mut conn = TcpStream::connect(host).await?;
         let instructions = instructions.clone();
 
         tasks.push(task::spawn(async move {
